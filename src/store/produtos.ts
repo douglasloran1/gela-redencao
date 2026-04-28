@@ -75,29 +75,9 @@ export const useProdutos = create<ProdutosStore>((set, get) => ({
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "produtos" },
-        (payload) => {
-          const { eventType, new: novo, old } = payload;
-          const { produtos } = get();
-
-          if (eventType === "INSERT") {
-            const item = rowToProduto(novo as Record<string, unknown>);
-            // Evita duplicatas (caso o dashboard já tenha atualizado o estado local)
-            if (produtos.some((p) => p.id === item.id)) return;
-            const lista = [...produtos, item];
-            set({ produtos: lista, categorias: calcCategorias(lista) });
-          }
-
-          if (eventType === "UPDATE") {
-            const item = rowToProduto(novo as Record<string, unknown>);
-            const lista = produtos.map((p) => (p.id === item.id ? item : p));
-            set({ produtos: lista, categorias: calcCategorias(lista) });
-          }
-
-          if (eventType === "DELETE") {
-            const id = (old as Record<string, unknown>).id as string;
-            const lista = produtos.filter((p) => p.id !== id);
-            set({ produtos: lista, categorias: calcCategorias(lista) });
-          }
+        () => {
+          // Sempre recarrega do banco para garantir consistência
+          get().carregar();
         }
       )
       .subscribe();
@@ -110,27 +90,19 @@ export const useProdutos = create<ProdutosStore>((set, get) => ({
 
   // ── Adicionar ─────────────────────────────────────────────────────────────
   adicionar: async (p) => {
-    const novoId = Date.now().toString();
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("produtos")
       .insert({
-        id: novoId,
         nome: p.nome,
         descricao: p.descricao,
         preco: p.preco,
         categoria: p.categoria,
         imagem: p.imagem,
         badge: p.badge ?? null,
-        atualizado_em: new Date().toISOString(),
-      })
-      .select()
-      .single();
+      });
 
     if (error) throw new Error(error.message);
-
-    const novo: Produto = rowToProduto(data as Record<string, unknown>);
-    const lista = [...get().produtos, novo];
-    set({ produtos: lista, categorias: calcCategorias(lista) });
+    // O realtime vai detectar o INSERT e chamar carregar() automaticamente
   },
 
   // ── Editar ────────────────────────────────────────────────────────────────
@@ -144,14 +116,11 @@ export const useProdutos = create<ProdutosStore>((set, get) => ({
         categoria: p.categoria,
         imagem: p.imagem,
         badge: p.badge ?? null,
-        atualizado_em: new Date().toISOString(),
       })
       .eq("id", p.id);
 
     if (error) throw new Error(error.message);
-
-    const lista = get().produtos.map((x) => (x.id === p.id ? p : x));
-    set({ produtos: lista, categorias: calcCategorias(lista) });
+    // O realtime vai detectar o UPDATE e chamar carregar() automaticamente
   },
 
   // ── Excluir ───────────────────────────────────────────────────────────────
@@ -162,8 +131,6 @@ export const useProdutos = create<ProdutosStore>((set, get) => ({
       .eq("id", id);
 
     if (error) throw new Error(error.message);
-
-    const lista = get().produtos.filter((x) => x.id !== id);
-    set({ produtos: lista, categorias: calcCategorias(lista) });
+    // O realtime vai detectar o DELETE e chamar carregar() automaticamente
   },
 }));
