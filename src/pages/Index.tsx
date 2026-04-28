@@ -28,20 +28,20 @@ const Index = () => {
       <Header />
       <main>
         <Banner />
-        <section id="produtos" className="container py-12">
-          <div className="text-center mb-8">
-            <p className="text-secondary font-bold text-sm tracking-widest uppercase mb-2">Cardápio</p>
-            <h2 className="font-display text-4xl md:text-5xl font-black text-primary mb-3">
+        <section id="produtos" className="container py-8 sm:py-12 px-4">
+          <div className="text-center mb-6 sm:mb-8">
+            <p className="text-secondary font-bold text-xs sm:text-sm tracking-widest uppercase mb-2">Cardápio</p>
+            <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-black text-primary mb-2 sm:mb-3">
               Nossos Produtos
             </h2>
-            <p className="text-muted-foreground max-w-xl mx-auto">
+            <p className="text-muted-foreground max-w-xl mx-auto text-sm sm:text-base">
               Tudo geladinho, prontinho pra entrega. Escolha seus favoritos e finalize o pedido.
             </p>
           </div>
 
           {/* Barra de busca */}
           {!carregando && !erro && (
-            <div className="relative max-w-md mx-auto mb-6">
+            <div className="relative max-w-md mx-auto mb-5 sm:mb-6">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <input
                 type="text"
@@ -63,13 +63,13 @@ const Index = () => {
 
           {/* Filtros de categoria */}
           {!carregando && !erro && (
-            <div className="flex gap-2 overflow-x-auto pb-3 mb-8 -mx-4 px-4 scrollbar-hide">
+            <div className="flex gap-2 overflow-x-auto pb-3 mb-6 sm:mb-8 -mx-4 px-4 scrollbar-hide">
               {categorias.map((c) => (
                 <button
                   key={c}
                   onClick={() => setCat(c)}
                   className={cn(
-                    "px-5 py-2.5 rounded-full font-semibold text-sm whitespace-nowrap transition-bounce border-2",
+                    "px-4 py-2 sm:px-5 sm:py-2.5 rounded-full font-semibold text-xs sm:text-sm whitespace-nowrap transition-bounce border-2",
                     cat === c
                       ? "bg-primary text-primary-foreground border-primary shadow-glow scale-105"
                       : "bg-card text-foreground border-border hover:border-primary"
@@ -101,28 +101,22 @@ const Index = () => {
             </div>
           )}
 
-          {/* Grade de produtos */}
-          {!carregando && !erro && (
-            <>
-              {busca && (
-                <p className="text-sm text-muted-foreground mb-4 text-center">
-                  {lista.length === 0
-                    ? `Nenhum resultado para "${busca}"`
-                    : `${lista.length} resultado${lista.length !== 1 ? "s" : ""} para "${busca}"`}
-                </p>
-              )}
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-                {lista.map((p, i) => (
-                  <ProductCard key={p.id} produto={p} index={i} />
-                ))}
-                {lista.length === 0 && !busca && (
-                  <div className="col-span-full text-center py-16 text-muted-foreground">
-                    <p className="text-4xl mb-3">📦</p>
-                    <p className="font-semibold">Nenhum produto nessa categoria.</p>
-                  </div>
-                )}
-              </div>
-            </>
+          {/* Grid de produtos — 2 colunas no mobile, 3 no tablet, 4 no desktop */}
+          {!carregando && !erro && lista.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5">
+              {lista.map((produto, index) => (
+                <ProductCard key={produto.id} produto={produto} index={index} />
+              ))}
+            </div>
+          )}
+
+          {/* Sem resultados */}
+          {!carregando && !erro && lista.length === 0 && (
+            <div className="text-center py-16">
+              <p className="text-4xl mb-3">🔍</p>
+              <p className="font-semibold text-foreground mb-1">Nenhum produto encontrado</p>
+              <p className="text-sm text-muted-foreground">Tente buscar por outro termo ou categoria.</p>
+            </div>
           )}
         </section>
       </main>

@@ -15,12 +15,10 @@ export const Banner = () => {
   const lista = banners.filter((b) => b.ativo && b.imagem);
   const usarPadrao = lista.length === 0;
 
-  // Reset índice se lista mudar
   useEffect(() => {
     setAtual(0);
   }, [lista.length]);
 
-  // Auto-avança a cada 5s
   useEffect(() => {
     if (usarPadrao || lista.length <= 1) return;
     const id = setInterval(() => {
@@ -37,7 +35,7 @@ export const Banner = () => {
 
   return (
     <section className="relative overflow-hidden">
-      <div className="relative h-[420px] md:h-[520px]">
+      <div className="relative h-[320px] sm:h-[420px] md:h-[520px]">
 
         {/* Imagem de fundo com transição */}
         <AnimatePresence mode="wait">
@@ -63,7 +61,7 @@ export const Banner = () => {
         <div className="absolute inset-0 bg-gradient-banner" />
 
         {/* Conteúdo */}
-        <div className="container relative h-full flex items-center">
+        <div className="container relative h-full flex items-center px-4">
           <AnimatePresence mode="wait">
             <motion.div
               key={atual}
@@ -71,18 +69,18 @@ export const Banner = () => {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 40 }}
               transition={{ duration: 0.5 }}
-              className="max-w-2xl"
+              className="max-w-2xl w-full"
             >
-              <span className="inline-block bg-secondary text-secondary-foreground font-bold px-4 py-1.5 rounded-full text-sm mb-4 shadow-gold">
+              <span className="inline-block bg-secondary text-secondary-foreground font-bold px-3 py-1 rounded-full text-xs sm:text-sm mb-3 shadow-gold">
                 🔥 PROMOÇÃO DA SEMANA
               </span>
 
               {bannerAtual?.titulo ? (
-                <h2 className="font-display text-4xl md:text-6xl lg:text-7xl font-black text-primary-foreground leading-[0.95] mb-4">
+                <h2 className="font-display text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-black text-primary-foreground leading-[0.95] mb-3">
                   {bannerAtual.titulo}
                 </h2>
               ) : (
-                <h2 className="font-display text-4xl md:text-6xl lg:text-7xl font-black text-primary-foreground leading-[0.95] mb-4">
+                <h2 className="font-display text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-black text-primary-foreground leading-[0.95] mb-3">
                   Sua bebida <br />
                   <span className="text-secondary drop-shadow-lg">SEMPRE GELADA</span>
                   <br /> na sua porta
@@ -90,18 +88,18 @@ export const Banner = () => {
               )}
 
               {bannerAtual?.subtitulo ? (
-                <p className="text-primary-foreground/90 text-lg md:text-xl mb-6 max-w-lg">
+                <p className="text-primary-foreground/90 text-sm sm:text-lg md:text-xl mb-4 max-w-lg">
                   {bannerAtual.subtitulo}
                 </p>
               ) : (
-                <p className="text-primary-foreground/90 text-lg md:text-xl mb-6 max-w-lg">
+                <p className="text-primary-foreground/90 text-sm sm:text-lg md:text-xl mb-4 max-w-lg">
                   Cervejas, refrigerantes, gelo e muito mais. Entrega rápida em toda a região da Redenção.
                 </p>
               )}
 
               <a
                 href="#produtos"
-                className="inline-block bg-secondary hover:bg-secondary-glow text-secondary-foreground font-bold px-7 py-4 rounded-xl shadow-gold transition-bounce hover:scale-105"
+                className="inline-block bg-secondary hover:bg-secondary-glow text-secondary-foreground font-bold px-5 py-3 sm:px-7 sm:py-4 rounded-xl shadow-gold transition-bounce hover:scale-105 text-sm sm:text-base"
               >
                 Ver Produtos →
               </a>
@@ -114,21 +112,21 @@ export const Banner = () => {
           <>
             <button
               onClick={anterior}
-              className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white rounded-full p-2.5 backdrop-blur-sm transition-all z-10"
+              className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white rounded-full p-2 sm:p-2.5 backdrop-blur-sm transition-all z-10"
               aria-label="Banner anterior"
             >
-              <ChevronLeft className="h-6 w-6" />
+              <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" />
             </button>
             <button
               onClick={proximo}
-              className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white rounded-full p-2.5 backdrop-blur-sm transition-all z-10"
+              className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white rounded-full p-2 sm:p-2.5 backdrop-blur-sm transition-all z-10"
               aria-label="Próximo banner"
             >
-              <ChevronRight className="h-6 w-6" />
+              <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
             </button>
 
             {/* Bolinhas */}
-            <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
               {lista.map((_, i) => (
                 <button
                   key={i}
@@ -143,17 +141,17 @@ export const Banner = () => {
         )}
       </div>
 
-      {/* Barra de features */}
+      {/* Barra de features — melhorada para mobile */}
       <div className="bg-primary text-primary-foreground">
-        <div className="container grid grid-cols-3 gap-4 py-5">
+        <div className="container grid grid-cols-3 gap-2 py-4 sm:py-5">
           {[
             { icon: Snowflake, txt: "Sempre Gelado" },
             { icon: Truck,     txt: "Entrega Rápida" },
-            { icon: Clock,     txt: "Aberto até 23h" },
+            { icon: Clock,     txt: "Aberto até 22h" }, // ✅ corrigido de 23h para 22h
           ].map((f) => (
-            <div key={f.txt} className="flex items-center justify-center gap-2 text-center">
-              <f.icon className="h-5 w-5 text-secondary shrink-0" />
-              <span className="text-sm md:text-base font-semibold">{f.txt}</span>
+            <div key={f.txt} className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 text-center">
+              <f.icon className="h-4 w-4 sm:h-5 sm:w-5 text-secondary shrink-0" />
+              <span className="text-[11px] sm:text-sm md:text-base font-semibold leading-tight">{f.txt}</span>
             </div>
           ))}
         </div>
