@@ -34,6 +34,17 @@ self.addEventListener('fetch', (event) => {
   // Ignora requisições não-HTTP (chrome-extension, etc.)
   if (!url.protocol.startsWith('http')) return;
 
+  // IMPORTANTE: Ignora requisições que não sejam GET
+  // PATCH, POST, PUT, DELETE não podem ser cacheadas
+  if (request.method !== 'GET') return;
+
+  // Ignora requisições para APIs externas (Supabase, Evolution, etc.)
+  if (
+    url.hostname.includes('supabase.co') ||
+    url.hostname.includes('railway.app') ||
+    url.hostname.includes('openfoodfacts.org')
+  ) return;
+
   // Para navegação (páginas HTML) — Network First
   if (request.mode === 'navigate') {
     event.respondWith(
@@ -53,7 +64,7 @@ self.addEventListener('fetch', (event) => {
     caches.match(request).then((cached) => {
       if (cached) return cached;
       return fetch(request).then((response) => {
-        if (response.ok) {
+        if (response.ok && request.method === 'GET') {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((c) => c.put(request, clone));
         }
