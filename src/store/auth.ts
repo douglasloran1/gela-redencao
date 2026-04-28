@@ -14,7 +14,7 @@ export const useAuth = create<AuthState>((set) => ({
   isAuthenticated: storedAuth,
   login: (username: string, password: string) => {
     // Credenciais hardcoded — em produção usar backend seguro
-    if (username === "admin" && password === "admin123") {
+    if (username === "gelaredenção" && password === "gela@345") {
       set({ isAuthenticated: true });
       localStorage.setItem("gela_auth", "true");
       return true;
