@@ -6,6 +6,16 @@ import { Button } from "@/components/ui/button";
 
 const FALLBACK = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect width='200' height='200' fill='%23e2e8f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='48'%3E🧊%3C/text%3E%3C/svg%3E";
 
+// Converte URL do Supabase Storage para usar o endpoint de render (sem CORS)
+function fixImageUrl(url: string): string {
+  if (!url) return "";
+  // Substitui /object/public/ por /render/image/public/ para evitar CORS
+  if (url.includes("supabase.co/storage/v1/object/public/")) {
+    return url.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/") + "?width=400&quality=80";
+  }
+  return url;
+}
+
 export const ProductCard = ({ produto, index }: { produto: Produto; index: number }) => {
   const { itens, adicionar, alterarQtd } = useCarrinho();
   const item = itens.find((i) => i.id === produto.id);
@@ -25,7 +35,7 @@ export const ProductCard = ({ produto, index }: { produto: Produto; index: numbe
           </span>
         )}
         <img
-          src={produto.imagem}
+          src={fixImageUrl(produto.imagem)}
           alt={produto.nome}
           loading="lazy"
           onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK; }}
