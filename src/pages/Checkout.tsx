@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Trash2, Plus, Minus, MapPin, Phone, User, CreditCard, Banknote, Smartphone, Search, Loader2 } from "lucide-react";
+import { ArrowLeft, Trash2, Plus, Minus, MapPin, Phone, User, CreditCard, Banknote, Smartphone, Search, Loader2, Truck } from "lucide-react";
 import { Header } from "@/components/Header";
 import { useCarrinho } from "@/store/carrinho";
 import { Button } from "@/components/ui/button";
@@ -17,9 +17,43 @@ const formasPagamento = [
   { id: "cartao",   nome: "Cartão",  icon: CreditCard, desc: "Débito ou crédito" },
 ];
 
+// ── Endereço base da loja (Rua Senador Ruy Carneiro, 120 – Redenção, Mossoró–RN) ──
+const LOJA_LAT = -5.1883;
+const LOJA_LNG = -37.3442;
+
+// Tabela de frete por distância (km → R$)
+const tabelaFrete = [
+  { ate: 1,   valor: 3 },
+  { ate: 2,   valor: 4 },
+  { ate: 3,   valor: 5 },
+  { ate: 5,   valor: 7 },
+  { ate: 8,   valor: 9 },
+  { ate: 12,  valor: 12 },
+  { ate: 20,  valor: 15 },
+  { ate: Infinity, valor: 20 },
+];
+
+function calcularFrete(km: number): number {
+  const faixa = tabelaFrete.find((f) => km <= f.ate);
+  return faixa ? faixa.valor : 20;
+}
+
+// Haversine – distância em km entre dois pontos
+function haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 const Checkout = () => {
   const navigate = useNavigate();
-  const { itens, alterarQtd, remover, total, setDadosCheckout } = useCarrinho();
+  const { itens, alterarQtd, remover, total, setDadosCheckout, setTaxaEntrega } = useCarrinho();
 
   const [nome, setNome]           = useState("");
   const [telefone, setTelefone]   = useState("");
@@ -33,11 +67,84 @@ const Checkout = () => {
   const [troco, setTroco]         = useState("");
   const [buscandoCep, setBuscandoCep] = useState(false);
 
-  const subtotal    = total();
-  const taxaEntrega = subtotal > 0 ? 5 : 0;
-  const totalFinal  = subtotal + taxaEntrega;
+  // Frete calculado por distância
+  const [taxaEntrega, setTaxaEntregaLocal] = useState<number>(0);
+  const [distanciaKm, setDistanciaKm] = useState<number | null>(null);
+  const [calculandoFrete, setCalculandoFrete] = useState(false);
+  const [freteCalculado, setFreteCalculado] = useState(false);
 
-  // ── API dos Correios via ViaCEP (sem CORS) ───────────────────────────────
+  const subtotal   = total();
+  const totalFinal = subtotal + taxaEntrega;
+
+  // ── Geocoding via Nominatim (OpenStreetMap, sem chave) ───────────────────
+  const calcularFreteByAddress = async (rua: string, num: string, bairroVal: string, cidadeVal: string) => {
+    if (!rua || !num) return;
+
+    const enderecoCompleto = `${rua}, ${num}${bairroVal ? ", " + bairroVal : ""}${cidadeVal ? ", " + cidadeVal : ""}, Brasil`;
+    setCalculandoFrete(true);
+
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(enderecoCompleto)}&limit=1`;
+      const res  = await fetch(url, {
+        headers: { "Accept-Language": "pt-BR", "User-Agent": "GelaApp/1.0" },
+      });
+      const data = await res.json();
+
+      if (!data.length) {
+        // fallback: tenta só rua + cidade
+        const url2 = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(rua + ", " + (cidadeVal || "Apodi, RN") + ", Brasil")}&limit=1`;
+        const res2  = await fetch(url2, { headers: { "Accept-Language": "pt-BR", "User-Agent": "GelaApp/1.0" } });
+        const data2 = await res2.json();
+        if (!data2.length) {
+          toast.warning("Não conseguimos localizar o endereço. Frete padrão aplicado.");
+          setTaxaEntregaLocal(10);
+          setTaxaEntrega(10);
+          setDistanciaKm(null);
+          setFreteCalculado(true);
+          return;
+        }
+        const lat = parseFloat(data2[0].lat);
+        const lng = parseFloat(data2[0].lon);
+        const km  = haversine(LOJA_LAT, LOJA_LNG, lat, lng);
+        setDistanciaKm(parseFloat(km.toFixed(1)));
+        setTaxaEntregaLocal(calcularFrete(km));
+        setTaxaEntrega(calcularFrete(km));
+        setFreteCalculado(true);
+        toast.success(`Frete calculado: ${km.toFixed(1)} km de distância`);
+        return;
+      }
+
+      const lat = parseFloat(data[0].lat);
+      const lng = parseFloat(data[0].lon);
+      const km  = haversine(LOJA_LAT, LOJA_LNG, lat, lng);
+      setDistanciaKm(parseFloat(km.toFixed(1)));
+      setTaxaEntregaLocal(calcularFrete(km));
+      setTaxaEntrega(calcularFrete(km));
+      setFreteCalculado(true);
+      toast.success(`Frete calculado: ${km.toFixed(1)} km de distância`);
+    } catch {
+      toast.warning("Erro ao calcular frete. Valor padrão aplicado.");
+      setTaxaEntregaLocal(10);
+      setTaxaEntrega(10);
+      setDistanciaKm(null);
+      setFreteCalculado(true);
+    } finally {
+      setCalculandoFrete(false);
+    }
+  };
+
+  // Recalcula frete quando endereço + número mudam e estão preenchidos
+  useEffect(() => {
+    if (endereco && numero) {
+      const t = setTimeout(() => {
+        calcularFreteByAddress(endereco, numero, bairro, cidade);
+      }, 1500);
+      return () => clearTimeout(t);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [endereco, numero, bairro, cidade]);
+
+  // ── API dos Correios via ViaCEP ──────────────────────────────────────────
   const buscarCep = async (valor: string) => {
     const cepLimpo = valor.replace(/\D/g, "");
     if (cepLimpo.length !== 8) return;
@@ -56,8 +163,6 @@ const Checkout = () => {
       setBairro(data.bairro || "");
       setCidade(`${data.localidade} – ${data.uf}`);
       toast.success("Endereço preenchido automaticamente!");
-
-      // Foca no campo número depois
       setTimeout(() => document.getElementById("numero")?.focus(), 100);
     } catch {
       toast.error("Erro ao buscar CEP. Verifique sua conexão.");
@@ -76,7 +181,8 @@ const Checkout = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (itens.length === 0) { toast.error("Seu carrinho está vazio"); return; }
-    if (!nome || !telefone || !cep || !endereco || !numero || !bairro) {
+    // CEP não é mais obrigatório
+    if (!nome || !telefone || !endereco || !numero || !bairro) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
@@ -136,9 +242,9 @@ const Checkout = () => {
               </h3>
               <div className="grid sm:grid-cols-3 gap-4">
 
-                {/* CEP */}
+                {/* CEP — agora opcional */}
                 <div className="sm:col-span-1">
-                  <Label htmlFor="cep">CEP *</Label>
+                  <Label htmlFor="cep">CEP <span className="text-muted-foreground text-xs">(opcional)</span></Label>
                   <div className="relative">
                     <Input
                       id="cep"
@@ -158,10 +264,10 @@ const Checkout = () => {
                   <p className="text-[11px] text-muted-foreground mt-1">Preenchimento automático</p>
                 </div>
 
-                {/* Rua (preenchida automaticamente) */}
+                {/* Rua */}
                 <div className="sm:col-span-2">
                   <Label htmlFor="endereco">Rua *</Label>
-                  <Input id="endereco" value={endereco} onChange={(e) => setEndereco(e.target.value)} placeholder="Preenchido pelo CEP" />
+                  <Input id="endereco" value={endereco} onChange={(e) => setEndereco(e.target.value)} placeholder="Nome da rua" />
                 </div>
 
                 {/* Número */}
@@ -170,16 +276,16 @@ const Checkout = () => {
                   <Input id="numero" value={numero} onChange={(e) => setNumero(e.target.value)} placeholder="123" />
                 </div>
 
-                {/* Bairro (preenchido automaticamente) */}
+                {/* Bairro */}
                 <div>
                   <Label htmlFor="bairro">Bairro *</Label>
-                  <Input id="bairro" value={bairro} onChange={(e) => setBairro(e.target.value)} placeholder="Preenchido pelo CEP" />
+                  <Input id="bairro" value={bairro} onChange={(e) => setBairro(e.target.value)} placeholder="Seu bairro" />
                 </div>
 
-                {/* Cidade (preenchida automaticamente) */}
+                {/* Cidade */}
                 <div>
                   <Label htmlFor="cidade">Cidade</Label>
-                  <Input id="cidade" value={cidade} onChange={(e) => setCidade(e.target.value)} placeholder="Preenchida pelo CEP" />
+                  <Input id="cidade" value={cidade} onChange={(e) => setCidade(e.target.value)} placeholder="Sua cidade" />
                 </div>
 
                 <div className="sm:col-span-3">
@@ -187,6 +293,29 @@ const Checkout = () => {
                   <Textarea id="referencia" value={referencia} onChange={(e) => setReferencia(e.target.value)} placeholder="Próximo a..." rows={2} />
                 </div>
               </div>
+
+              {/* Banner frete calculado */}
+              {calculandoFrete && (
+                <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground bg-muted rounded-xl px-4 py-3">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  Calculando frete pela distância...
+                </div>
+              )}
+              {freteCalculado && !calculandoFrete && distanciaKm !== null && (
+                <div className="mt-4 flex items-center gap-2 text-sm bg-primary/5 border border-primary/20 rounded-xl px-4 py-3">
+                  <Truck className="h-4 w-4 text-primary shrink-0" />
+                  <span>
+                    Distância estimada: <strong>{distanciaKm} km</strong> — Taxa de entrega:{" "}
+                    <strong className="text-primary">R$ {taxaEntrega.toFixed(2).replace(".", ",")}</strong>
+                  </span>
+                </div>
+              )}
+              {freteCalculado && !calculandoFrete && distanciaKm === null && (
+                <div className="mt-4 flex items-center gap-2 text-sm bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3 text-yellow-800">
+                  <Truck className="h-4 w-4 shrink-0" />
+                  Endereço não localizado. Taxa de entrega padrão aplicada.
+                </div>
+              )}
             </motion.div>
 
             {/* Pagamento */}
@@ -246,7 +375,23 @@ const Checkout = () => {
               </div>
               <div className="border-t border-border p-5 space-y-2">
                 <div className="flex justify-between text-sm text-muted-foreground"><span>Subtotal</span><span>R$ {subtotal.toFixed(2).replace(".", ",")}</span></div>
-                <div className="flex justify-between text-sm text-muted-foreground"><span>Taxa de entrega</span><span>R$ {taxaEntrega.toFixed(2).replace(".", ",")}</span></div>
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    Taxa de entrega
+                    {calculandoFrete && <Loader2 className="h-3 w-3 animate-spin" />}
+                  </span>
+                  <span>
+                    {calculandoFrete
+                      ? "Calculando..."
+                      : subtotal > 0
+                        ? `R$ ${taxaEntrega.toFixed(2).replace(".", ",")}`
+                        : "R$ 0,00"
+                    }
+                  </span>
+                </div>
+                {distanciaKm !== null && (
+                  <p className="text-[11px] text-muted-foreground text-right">{distanciaKm} km de distância</p>
+                )}
                 <div className="flex justify-between text-xl font-display font-black text-primary pt-2 border-t border-border"><span>Total</span><span>R$ {totalFinal.toFixed(2).replace(".", ",")}</span></div>
                 <Button type="submit" size="lg" className="w-full mt-3 bg-gradient-gold text-secondary-foreground border-0 font-bold shadow-gold hover:opacity-95 text-base h-12">
                   Confirmar Pedido →

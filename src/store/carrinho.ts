@@ -19,6 +19,7 @@ export type DadosCheckout = {
 type CarrinhoStore = {
   itens: ItemCarrinho[];
   dadosCheckout: DadosCheckout | null;
+  taxaEntrega: number;
   adicionar: (p: Produto) => void;
   remover: (id: string) => void;
   alterarQtd: (id: string, qtd: number) => void;
@@ -26,11 +27,13 @@ type CarrinhoStore = {
   total: () => number;
   qtdTotal: () => number;
   setDadosCheckout: (d: DadosCheckout) => void;
+  setTaxaEntrega: (valor: number) => void;
 };
 
 export const useCarrinho = create<CarrinhoStore>((set, get) => ({
   itens: [],
   dadosCheckout: null,
+  taxaEntrega: 0,
   adicionar: (p) =>
     set((s) => {
       const existe = s.itens.find((i) => i.id === p.id);
@@ -44,8 +47,9 @@ export const useCarrinho = create<CarrinhoStore>((set, get) => ({
     set((s) => ({
       itens: qtd <= 0 ? s.itens.filter((i) => i.id !== id) : s.itens.map((i) => (i.id === id ? { ...i, quantidade: qtd } : i)),
     })),
-  limpar: () => set({ itens: [], dadosCheckout: null }),
+  limpar: () => set({ itens: [], dadosCheckout: null, taxaEntrega: 0 }),
   total: () => get().itens.reduce((acc, i) => acc + i.preco * i.quantidade, 0),
   qtdTotal: () => get().itens.reduce((acc, i) => acc + i.quantidade, 0),
   setDadosCheckout: (d) => set({ dadosCheckout: d }),
+  setTaxaEntrega: (valor) => set({ taxaEntrega: valor }),
 }));

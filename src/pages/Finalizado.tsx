@@ -34,7 +34,7 @@ const Finalizado = () => {
   if (!dadosCheckout || itens.length === 0) return null;
 
   const subtotal = total();
-  const taxaEntrega = 5;
+  const taxaEntrega = useCarrinho((s) => s.taxaEntrega);
   const totalFinal = subtotal + taxaEntrega;
   const numeroPedido = `#${Math.floor(Math.random() * 90000 + 10000)}`;
 
@@ -261,7 +261,7 @@ const Finalizado = () => {
             ))}
             <div className="flex justify-between text-sm pt-2 border-t border-border text-muted-foreground">
               <span>Taxa de entrega</span>
-              <span>R$ 5,00</span>
+              <span>R$ {taxaEntrega.toFixed(2).replace(".", ",")}</span>
             </div>
             <div className="flex justify-between text-xl font-display font-black text-primary pt-2 border-t border-border">
               <span>Total</span>
