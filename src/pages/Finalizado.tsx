@@ -6,15 +6,10 @@ import { Header } from "@/components/Header";
 import { useCarrinho } from "@/store/carrinho";
 import { Button } from "@/components/ui/button";
 import { enviarConfirmacaoPedido } from "@/lib/whatsapp";
+import { salvarPedido } from "@/pages/dashboard/types";
 
 // Número da loja para notificação interna (fallback wa.me)
 const WHATSAPP_LOJA = "5584996836048";
-
-function salvarPedido(pedido: object) {
-  const existentes = JSON.parse(localStorage.getItem("gela_pedidos") || "[]");
-  existentes.push(pedido);
-  localStorage.setItem("gela_pedidos", JSON.stringify(existentes));
-}
 
 type StatusEnvio = "enviando" | "enviado" | "erro" | "sem_api";
 
@@ -79,8 +74,10 @@ const Finalizado = () => {
       subtotal,
       taxaEntrega,
       total: totalFinal,
-      status: "pendente",
+      status: "pendente" as const,
     };
+
+    // Salva no Supabase
     salvarPedido(pedido);
 
     // Envia mensagem automaticamente via Evolution API

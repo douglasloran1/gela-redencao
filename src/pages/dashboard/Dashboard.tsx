@@ -14,7 +14,7 @@ import { useAuth } from "@/store/auth";
 import { ProdutosManager } from "./ProdutosManager";
 import { BannersManager } from "./BannersManager";
 import {
-  Pedido, carregarPedidos, atualizarStatus,
+  Pedido, carregarPedidos, atualizarStatus, escutarPedidos,
   PAGAMENTO_LABEL, STATUS_LABEL,
   filtrarPorPeriodo, topItens, pedidosPorDia,
 } from "./types";
@@ -50,14 +50,20 @@ export default function Dashboard() {
     navigate("/painel");
   };
 
-  const recarregar = useCallback(() => {
-    setTodos(carregarPedidos());
+  const recarregar = useCallback(async () => {
+    const pedidos = await carregarPedidos();
+    setTodos(pedidos);
   }, []);
 
   useEffect(() => {
     recarregar();
-    const id = setInterval(recarregar, 10000);
-    return () => clearInterval(id);
+
+    // Realtime: atualiza lista quando chega novo pedido ou muda status
+    const canal = escutarPedidos(() => recarregar());
+
+    return () => {
+      canal.unsubscribe();
+    };
   }, [recarregar]);
 
   const filtrados = filtrarPorPeriodo(todos, periodo);
@@ -101,8 +107,8 @@ export default function Dashboard() {
     ultimoCountRef.current = todos.length;
   }, [todos.length]);
 
-  const handleStatus = (id: string, status: Pedido["status"]) => {
-    atualizarStatus(id, status);
+  const handleStatus = async (id: string, status: Pedido["status"]) => {
+    await atualizarStatus(id, status);
     recarregar();
     if (pedidoAtivo?.id === id) setPedidoAtivo((prev) => prev ? { ...prev, status } : null);
   };
@@ -143,7 +149,7 @@ export default function Dashboard() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-white/30 hidden sm:block">Auto-atualiza 10s</span>
+            <span className="text-xs text-white/30 hidden sm:block">Tempo real ⚡</span>
             <Button size="sm" variant="ghost" className="text-[#f5a500] hover:bg-white/10" onClick={recarregar}>
               <RefreshCw className="h-4 w-4" />
             </Button>
