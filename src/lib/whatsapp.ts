@@ -57,7 +57,7 @@ async function enviarMidia(
   }
 }
 
-// Confirmação de pedido + convite para opt-in de promoções
+// Confirmação de pedido + convite opt-in na mesma mensagem
 export async function enviarConfirmacaoPedido(params: {
   telefoneCliente: string;
   nomeCliente: string;
@@ -90,7 +90,7 @@ export async function enviarConfirmacaoPedido(params: {
     .map((i) => `  • ${i.quantidade}x ${i.nome} — R$ ${(i.preco * i.quantidade).toFixed(2).replace(".", ",")}`)
     .join("\n");
 
-  const mensagemPedido = [
+  const mensagem = [
     `🧊 *Olá, ${params.nomeCliente}! Seu pedido foi confirmado!*`,
     ``,
     `📋 *Pedido ${params.numeroPedido} – Gela Redenção*`,
@@ -112,26 +112,18 @@ export async function enviarConfirmacaoPedido(params: {
     ``,
     `Qualquer dúvida é só responder aqui. Obrigado pela preferência! 🙏`,
     `— Equipe Gela Redenção 🧊`,
+    ``,
+    `━━━━━━━━━━━━━━━━━━━━━`,
+    `🔔 *Quer receber promoções do Gela pelo WhatsApp?*`,
+    `Receba ofertas exclusivas e novidades direto aqui!`,
+    ``,
+    `Digite *1* para ✅ Sim, quero receber!`,
+    `Digite *2* para ❌ Não, obrigado`,
   ]
     .filter((l) => l !== null)
     .join("\n");
 
-  // Envia confirmação do pedido
-  await enviarTexto(params.telefoneCliente, mensagemPedido);
-
-  // Aguarda 2s e envia convite de promoções por texto
-  await new Promise((r) => setTimeout(r, 2000));
-  return enviarTexto(
-    params.telefoneCliente,
-    [
-      `🔔 *Quer receber promoções do Gela pelo WhatsApp?*`,
-      ``,
-      `Receba ofertas exclusivas e novidades direto aqui!`,
-      ``,
-      `Digite *1* para ✅ Sim, quero receber!`,
-      `Digite *2* para ❌ Não, obrigado`,
-    ].join("\n")
-  );
+  return enviarTexto(params.telefoneCliente, mensagem);
 }
 
 // Carregar lista de clientes ativos no Supabase
@@ -178,8 +170,6 @@ export async function dispararPromocao(params: {
     }
 
     params.onProgresso?.(i + 1, total);
-
-    // 1s entre envios para não ser bloqueado pelo WhatsApp
     if (i < total - 1) await new Promise((r) => setTimeout(r, 1000));
   }
 
