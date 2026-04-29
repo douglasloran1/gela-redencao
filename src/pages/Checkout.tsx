@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Trash2, Plus, Minus, MapPin, Phone, User, CreditCard, Banknote, Smartphone, Search, Loader2, Truck } from "lucide-react";
 import { Header } from "@/components/Header";
 import { useCarrinho } from "@/store/carrinho";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,6 +57,7 @@ const Checkout = () => {
   const [referencia, setReferencia] = useState("");
   const [pagamento, setPagamento] = useState("pix");
   const [troco, setTroco]         = useState("");
+  const [aceitaPromocoes, setAceitaPromocoes] = useState(false);
   const [buscandoCep, setBuscandoCep] = useState(false);
 
   // Frete calculado por distância
@@ -169,13 +171,21 @@ const Checkout = () => {
     if (v.replace(/\D/g, "").length === 8) buscarCep(v);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (itens.length === 0) { toast.error("Seu carrinho está vazio"); return; }
-    // CEP não é mais obrigatório
     if (!nome || !telefone || !endereco || !numero || !bairro) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
+    }
+    // Salva opt-in de promoções se cliente aceitou
+    if (aceitaPromocoes && telefone) {
+      const tel = telefone.replace(/\D/g, "");
+      const telFormatado = tel.startsWith("55") ? tel : `55${tel}`;
+      await supabase.from("clientes_notificacao").upsert(
+        { telefone: telFormatado, nome, ativo: true, aceito_em: new Date().toISOString() },
+        { onConflict: "telefone" }
+      );
     }
     setDadosCheckout({ nome, telefone, cep, endereco, numero, bairro, cidade, referencia, formaPagamento: pagamento, troco });
     navigate("/finalizado");
@@ -384,6 +394,25 @@ const Checkout = () => {
                   <p className="text-[11px] text-muted-foreground text-right">{distanciaKm} km de distância</p>
                 )}
                 <div className="flex justify-between text-xl font-display font-black text-primary pt-2 border-t border-border"><span>Total</span><span>R$ {totalFinal.toFixed(2).replace(".", ",")}</span></div>
+                {/* Opt-in de promoções */}
+                <label className="flex items-start gap-3 cursor-pointer p-3 rounded-xl border border-border hover:border-primary/40 transition-colors bg-primary/3 mt-3">
+                  <div className="relative mt-0.5 shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={aceitaPromocoes}
+                      onChange={(e) => setAceitaPromocoes(e.target.checked)}
+                      className="sr-only"
+                    />
+                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${aceitaPromocoes ? "bg-primary border-primary" : "border-border bg-background"}`}>
+                      {aceitaPromocoes && <svg viewBox="0 0 12 12" fill="none" className="w-3 h-3"><path d="M2 6l3 3 5-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Quero receber promoções pelo WhatsApp</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Receba ofertas exclusivas e novidades do Gela direto no seu WhatsApp. Pode cancelar quando quiser.</p>
+                  </div>
+                </label>
+
                 <Button type="submit" size="lg" className="w-full mt-3 bg-gradient-gold text-secondary-foreground border-0 font-bold shadow-gold hover:opacity-95 text-base h-12">
                   Confirmar Pedido →
                 </Button>
