@@ -57,6 +57,41 @@ async function enviarMidia(
   }
 }
 
+async function enviarBotoes(
+  telefone: string,
+  titulo: string,
+  corpo: string,
+  rodape: string,
+  botoes: { id: string; texto: string }[]
+): Promise<{ ok: boolean; erro?: string }> {
+  try {
+    const res = await fetch(`${EVOLUTION_URL}/message/sendButtons/${EVOLUTION_INSTANCE}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: EVOLUTION_KEY },
+      body: JSON.stringify({
+        number: formatarTelefone(telefone),
+        title: titulo,
+        description: corpo,
+        footer: rodape,
+        buttons: botoes.map((b) => ({
+          type: "reply",
+          displayText: b.texto,
+          id: b.id,
+        })),
+        options: { delay: 1500, presence: "composing" },
+      }),
+    });
+    if (!res.ok) {
+      return enviarTexto(telefone,
+        `${titulo}\n\n${corpo}\n\n${botoes.map((b) => `• Responda *${b.texto}*`).join("\n")}\n\n${rodape}`
+      );
+    }
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, erro: String(err) };
+  }
+}
+
 // Confirmação de pedido + convite para opt-in de promoções
 export async function enviarConfirmacaoPedido(params: {
   telefoneCliente: string;
@@ -90,7 +125,7 @@ export async function enviarConfirmacaoPedido(params: {
     .map((i) => `  • ${i.quantidade}x ${i.nome} — R$ ${(i.preco * i.quantidade).toFixed(2).replace(".", ",")}`)
     .join("\n");
 
-  const mensagem = [
+  const mensagemPedido = [
     `🧊 *Olá, ${params.nomeCliente}! Seu pedido foi confirmado!*`,
     ``,
     `📋 *Pedido ${params.numeroPedido} – Gela Redenção*`,
@@ -112,17 +147,25 @@ export async function enviarConfirmacaoPedido(params: {
     ``,
     `Qualquer dúvida é só responder aqui. Obrigado pela preferência! 🙏`,
     `— Equipe Gela Redenção 🧊`,
-    ``,
-    `━━━━━━━━━━━━━━━━━━━━━`,
-    `🔔 *Quer receber promoções e novidades do Gela pelo WhatsApp?*`,
-    ``,
-    `Responda *SIM* para receber ofertas exclusivas`,
-    `ou *NÃO* para não receber notificações.`,
   ]
     .filter((l) => l !== null)
     .join("\n");
 
-  return enviarTexto(params.telefoneCliente, mensagem);
+  // Envia confirmação do pedido
+  await enviarTexto(params.telefoneCliente, mensagemPedido);
+
+  // Aguarda 2s e envia convite de promoções com botões
+  await new Promise((r) => setTimeout(r, 2000));
+  return enviarBotoes(
+    params.telefoneCliente,
+    "🔔 Promoções Gela Redenção",
+    "Quer receber ofertas exclusivas, novidades e promoções do Gela direto no seu WhatsApp?",
+    "Gela Redenção 🧊",
+    [
+      { id: "SIM", texto: "✅ Sim, quero receber!" },
+      { id: "NAO", texto: "❌ Não, obrigado" },
+    ]
+  );
 }
 
 // Carregar lista de clientes ativos no Supabase

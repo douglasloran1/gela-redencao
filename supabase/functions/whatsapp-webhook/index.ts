@@ -11,6 +11,36 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 );
 
+const EVOLUTION_URL      = Deno.env.get("EVOLUTION_URL") ?? "";
+const EVOLUTION_KEY      = Deno.env.get("EVOLUTION_KEY") ?? "";
+const EVOLUTION_INSTANCE = Deno.env.get("EVOLUTION_INSTANCE") ?? "gela";
+
+async function enviarConfirmacaoOptin(telefone: string, nome: string) {
+  if (!EVOLUTION_URL || !EVOLUTION_KEY) return;
+  await fetch(`${EVOLUTION_URL}/message/sendText/${EVOLUTION_INSTANCE}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: EVOLUTION_KEY },
+    body: JSON.stringify({
+      number: telefone,
+      text: `✅ *Oba, ${nome || "cliente"}!* Você foi cadastrado com sucesso para receber promoções e novidades exclusivas do Gela Redenção! 🧊🎉\n\nEm breve você receberá nossas ofertas aqui. Para sair a qualquer momento, responda *NÃO*.`,
+      options: { delay: 500, presence: "composing" },
+    }),
+  });
+}
+
+async function enviarConfirmacaoOptout(telefone: string) {
+  if (!EVOLUTION_URL || !EVOLUTION_KEY) return;
+  await fetch(`${EVOLUTION_URL}/message/sendText/${EVOLUTION_INSTANCE}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: EVOLUTION_KEY },
+    body: JSON.stringify({
+      number: telefone,
+      text: `Tudo bem! Você foi removido da lista de promoções do Gela. 👍\n\nSe mudar de ideia, é só responder *SIM* para se cadastrar novamente.`,
+      options: { delay: 500 },
+    }),
+  });
+}
+
 // Palavras que significam SIM / NÃO (aceita variações comuns)
 const PALAVRAS_SIM = ["sim", "s", "quero", "aceito", "ok", "yes", "pode", "claro", "bora"];
 const PALAVRAS_NAO = ["nao", "não", "n", "no", "nunca", "cancelar", "parar", "stop", "sair", "remover"];
@@ -52,13 +82,21 @@ Deno.serve(async (req: Request) => {
   const remoteJid = (data?.key as Record<string, unknown>)?.remoteJid as string ?? "";
   const telefone  = remoteJid.replace("@s.whatsapp.net", "").replace(/\D/g, "");
 
+  // Extrai texto da mensagem (texto normal ou resposta de botão)
+  const msg = data?.message as Record<string, unknown>;
   const mensagem = (
-    (data?.message as Record<string, unknown>)?.conversation as string ??
-    ((data?.message as Record<string, unknown>)?.extendedTextMessage as Record<string, unknown>)?.text as string ??
+    msg?.conversation as string ??
+    (msg?.extendedTextMessage as Record<string, unknown>)?.text as string ??
     ""
   );
 
-  if (!telefone || !mensagem) {
+  // Captura o ID do botão clicado (buttonsResponseMessage)
+  const buttonId = (
+    (msg?.buttonsResponseMessage as Record<string, unknown>)?.selectedButtonId as string ??
+    ""
+  ).toUpperCase();
+
+  if (!telefone) {
     return new Response("Dados insuficientes", { status: 200 });
   }
 
@@ -67,8 +105,9 @@ Deno.serve(async (req: Request) => {
 
   const texto = normalizar(mensagem);
 
-  const ehSim = PALAVRAS_SIM.some((p) => texto === p || texto.startsWith(p + " "));
-  const ehNao = PALAVRAS_NAO.some((p) => texto === p || texto.startsWith(p + " "));
+  // Verifica botão clicado primeiro, depois texto livre
+  const ehSim = buttonId === "SIM" || PALAVRAS_SIM.some((p) => texto === p || texto.startsWith(p + " "));
+  const ehNao = buttonId === "NAO" || PALAVRAS_NAO.some((p) => texto === p || texto.startsWith(p + " "));
 
   if (ehSim) {
     // Upsert: insere ou reativa se já existia
@@ -85,6 +124,7 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log(`[webhook] Opt-in registrado: ${telefone} (${nome})`);
+    await enviarConfirmacaoOptin(telefone, nome);
     return new Response("Opt-in registrado", { status: 200 });
   }
 
@@ -100,6 +140,7 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log(`[webhook] Opt-out registrado: ${telefone}`);
+    await enviarConfirmacaoOptout(telefone);
     return new Response("Opt-out registrado", { status: 200 });
   }
 
