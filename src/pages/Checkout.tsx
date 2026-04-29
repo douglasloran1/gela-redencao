@@ -22,20 +22,11 @@ const LOJA_LAT = -5.1883;
 const LOJA_LNG = -37.3442;
 
 // Tabela de frete por distância (km → R$)
-const tabelaFrete = [
-  { ate: 1,   valor: 3 },
-  { ate: 2,   valor: 4 },
-  { ate: 3,   valor: 5 },
-  { ate: 5,   valor: 7 },
-  { ate: 8,   valor: 9 },
-  { ate: 12,  valor: 12 },
-  { ate: 20,  valor: 15 },
-  { ate: Infinity, valor: 20 },
-];
 
+// Frete: R$5 até 1km, depois +R$1 por km adicional (arredondado para cima)
 function calcularFrete(km: number): number {
-  const faixa = tabelaFrete.find((f) => km <= f.ate);
-  return faixa ? faixa.valor : 20;
+  if (km <= 1) return 5;
+  return 5 + Math.ceil(km - 1);
 }
 
 // Haversine – distância em km entre dois pontos
