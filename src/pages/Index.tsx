@@ -6,6 +6,7 @@ import { Footer } from "@/components/Footer";
 import { useProdutos } from "@/store/produtos";
 import { cn } from "@/lib/utils";
 import { Loader2, Search, X } from "lucide-react";
+import { InstalarApp } from "@/components/InstalarApp";
 
 const Index = () => {
   const { produtos, categorias, carregando, erro, carregar } = useProdutos();
@@ -37,6 +38,9 @@ const Index = () => {
             <p className="text-muted-foreground max-w-xl mx-auto text-sm sm:text-base">
               Tudo geladinho, prontinho pra entrega. Escolha seus favoritos e finalize o pedido.
             </p>
+            <div className="flex justify-center mt-4">
+              <InstalarApp />
+            </div>
           </div>
 
           {/* Barra de busca */}
