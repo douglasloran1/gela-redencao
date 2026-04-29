@@ -1,29 +1,63 @@
-// ─────────────────────────────────────────────────────────────────────────────
 // Integração com Evolution API (WhatsApp)
 // Docs: https://doc.evolution-api.com
-//
-// Configure as variáveis abaixo com os valores do seu Railway:
-// ─────────────────────────────────────────────────────────────────────────────
 
-const EVOLUTION_URL = import.meta.env.VITE_EVOLUTION_URL ?? "";
-// Ex: https://sua-instancia.up.railway.app
+import { supabase } from "@/lib/supabase";
 
-const EVOLUTION_KEY = import.meta.env.VITE_EVOLUTION_KEY ?? "";
-// A chave global (AUTHENTICATION_API_KEY) definida no Railway
-
+const EVOLUTION_URL      = import.meta.env.VITE_EVOLUTION_URL ?? "";
+const EVOLUTION_KEY      = import.meta.env.VITE_EVOLUTION_KEY ?? "";
 const EVOLUTION_INSTANCE = import.meta.env.VITE_EVOLUTION_INSTANCE ?? "gela";
-// Nome da instância que você criou na Evolution API
 
-// ─────────────────────────────────────────────────────────────────────────────
-
-function formatarTelefone(tel: string): string {
+export function formatarTelefone(tel: string): string {
   const digits = tel.replace(/\D/g, "");
-  // Garante o código do Brasil (55) + DDD + número
   if (digits.startsWith("55") && digits.length >= 12) return digits;
   if (digits.length === 11 || digits.length === 10) return `55${digits}`;
   return digits;
 }
 
+async function enviarTexto(telefone: string, mensagem: string): Promise<{ ok: boolean; erro?: string }> {
+  try {
+    const res = await fetch(`${EVOLUTION_URL}/message/sendText/${EVOLUTION_INSTANCE}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: EVOLUTION_KEY },
+      body: JSON.stringify({
+        number: formatarTelefone(telefone),
+        text: mensagem,
+        options: { delay: 1000, presence: "composing" },
+      }),
+    });
+    if (!res.ok) return { ok: false, erro: `Erro ${res.status}` };
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, erro: String(err) };
+  }
+}
+
+async function enviarMidia(
+  telefone: string,
+  tipo: "image" | "video",
+  url: string,
+  caption: string
+): Promise<{ ok: boolean; erro?: string }> {
+  try {
+    const endpoint = tipo === "image" ? "sendImage" : "sendVideo";
+    const res = await fetch(`${EVOLUTION_URL}/message/${endpoint}/${EVOLUTION_INSTANCE}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: EVOLUTION_KEY },
+      body: JSON.stringify({
+        number: formatarTelefone(telefone),
+        [tipo]: url,
+        caption,
+        options: { delay: 1000 },
+      }),
+    });
+    if (!res.ok) return { ok: false, erro: `Erro ${res.status}` };
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, erro: String(err) };
+  }
+}
+
+// Confirmação de pedido + convite para opt-in de promoções
 export async function enviarConfirmacaoPedido(params: {
   telefoneCliente: string;
   nomeCliente: string;
@@ -40,7 +74,7 @@ export async function enviarConfirmacaoPedido(params: {
   total: number;
 }): Promise<{ ok: boolean; erro?: string }> {
   if (!EVOLUTION_URL || !EVOLUTION_KEY) {
-    console.warn("[WhatsApp] VITE_EVOLUTION_URL ou VITE_EVOLUTION_KEY não configurados.");
+    console.warn("[WhatsApp] API não configurada.");
     return { ok: false, erro: "API não configurada" };
   }
 
@@ -53,12 +87,7 @@ export async function enviarConfirmacaoPedido(params: {
   };
 
   const linhasItens = params.itens
-    .map(
-      (i) =>
-        `  • ${i.quantidade}x ${i.nome} — R$ ${(i.preco * i.quantidade)
-          .toFixed(2)
-          .replace(".", ",")}`
-    )
+    .map((i) => `  • ${i.quantidade}x ${i.nome} — R$ ${(i.preco * i.quantidade).toFixed(2).replace(".", ",")}`)
     .join("\n");
 
   const mensagem = [
@@ -83,41 +112,67 @@ export async function enviarConfirmacaoPedido(params: {
     ``,
     `Qualquer dúvida é só responder aqui. Obrigado pela preferência! 🙏`,
     `— Equipe Gela Redenção 🧊`,
+    ``,
+    `━━━━━━━━━━━━━━━━━━━━━`,
+    `🔔 *Quer receber promoções e novidades do Gela pelo WhatsApp?*`,
+    ``,
+    `Responda *SIM* para receber ofertas exclusivas`,
+    `ou *NÃO* para não receber notificações.`,
   ]
     .filter((l) => l !== null)
     .join("\n");
 
-  try {
-    const telefone = formatarTelefone(params.telefoneCliente);
+  return enviarTexto(params.telefoneCliente, mensagem);
+}
 
-    const response = await fetch(
-      `${EVOLUTION_URL}/message/sendText/${EVOLUTION_INSTANCE}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: EVOLUTION_KEY,
-        },
-body: JSON.stringify({
-  number: telefone,
-  text: mensagem,
-  options: {
-    delay: 1000,
-    presence: "composing",
-  },
-}),
-      }
-    );
+// Carregar lista de clientes ativos no Supabase
+export async function carregarClientesNotificacao(): Promise<
+  { telefone: string; nome: string; aceito_em: string }[]
+> {
+  const { data, error } = await supabase
+    .from("clientes_notificacao")
+    .select("telefone, nome, aceito_em")
+    .eq("ativo", true)
+    .order("aceito_em", { ascending: false });
 
-    if (!response.ok) {
-      const body = await response.text();
-      console.error("[WhatsApp] Erro na API:", response.status, body);
-      return { ok: false, erro: `Erro ${response.status}: ${body}` };
+  if (error) {
+    console.error("[Supabase] Erro ao carregar clientes:", error.message);
+    return [];
+  }
+  return data ?? [];
+}
+
+// Disparar promoção para todos os clientes cadastrados
+export async function dispararPromocao(params: {
+  mensagem: string;
+  midiaUrl?: string;
+  midiaType?: "image" | "video";
+  clientes: { telefone: string }[];
+  onProgresso?: (atual: number, total: number) => void;
+}): Promise<{ enviados: number; erros: number }> {
+  let enviados = 0;
+  let erros    = 0;
+  const total  = params.clientes.length;
+
+  for (let i = 0; i < total; i++) {
+    const { telefone } = params.clientes[i];
+    try {
+      const resultado =
+        params.midiaUrl && params.midiaType
+          ? await enviarMidia(telefone, params.midiaType, params.midiaUrl, params.mensagem)
+          : await enviarTexto(telefone, params.mensagem);
+
+      if (resultado.ok) enviados++;
+      else erros++;
+    } catch {
+      erros++;
     }
 
-    return { ok: true };
-  } catch (err) {
-    console.error("[WhatsApp] Falha na requisição:", err);
-    return { ok: false, erro: String(err) };
+    params.onProgresso?.(i + 1, total);
+
+    // 1s entre envios para não ser bloqueado pelo WhatsApp
+    if (i < total - 1) await new Promise((r) => setTimeout(r, 1000));
   }
+
+  return { enviados, erros };
 }

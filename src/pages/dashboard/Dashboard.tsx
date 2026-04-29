@@ -13,8 +13,9 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/store/auth";
 import { ProdutosManager } from "./ProdutosManager";
 import { BannersManager } from "./BannersManager";
+import { PromocoesManager } from "./PromocoesManager";
 import {
-  Pedido, carregarPedidos, atualizarStatus, escutarPedidos,
+  Pedido, carregarPedidos, atualizarStatus,
   PAGAMENTO_LABEL, STATUS_LABEL,
   filtrarPorPeriodo, topItens, pedidosPorDia,
 } from "./types";
@@ -43,7 +44,7 @@ export default function Dashboard() {
   const [periodo, setPeriodo]         = useState<Periodo>("semana");
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
   const [pedidoAtivo, setPedidoAtivo] = useState<Pedido | null>(null);
-  const [aba, setAba] = useState<"pedidos" | "relatorios" | "produtos" | "banners">("pedidos");
+  const [aba, setAba] = useState<"pedidos" | "relatorios" | "produtos" | "banners" | "promocoes">("pedidos");
 
   const handleLogout = () => {
     logout();
@@ -57,13 +58,8 @@ export default function Dashboard() {
 
   useEffect(() => {
     recarregar();
-
-    // Realtime: atualiza lista quando chega novo pedido ou muda status
-    const canal = escutarPedidos(() => recarregar());
-
-    return () => {
-      canal.unsubscribe();
-    };
+    const id = setInterval(recarregar, 10000);
+    return () => clearInterval(id);
   }, [recarregar]);
 
   const filtrados = filtrarPorPeriodo(todos, periodo);
@@ -125,10 +121,11 @@ export default function Dashboard() {
   };
 
   const ABAS = [
-    { id: "pedidos",   label: "📦 Pedidos" },
+    { id: "pedidos",    label: "📦 Pedidos" },
     { id: "relatorios", label: "📈 Relatórios" },
-    { id: "produtos",  label: "🛒 Produtos" },
-    { id: "banners",   label: "🖼️ Banners" },
+    { id: "produtos",   label: "🛒 Produtos" },
+    { id: "banners",    label: "🖼️ Banners" },
+    { id: "promocoes",  label: "📣 Promoções" },
   ] as const;
 
   return (
@@ -149,7 +146,7 @@ export default function Dashboard() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-white/30 hidden sm:block">Tempo real ⚡</span>
+            <span className="text-xs text-white/30 hidden sm:block">Auto-atualiza 10s</span>
             <Button size="sm" variant="ghost" className="text-[#f5a500] hover:bg-white/10" onClick={recarregar}>
               <RefreshCw className="h-4 w-4" />
             </Button>
@@ -496,6 +493,12 @@ export default function Dashboard() {
         {aba === "banners" && (
           <div className="pb-8">
             <BannersManager />
+          </div>
+        )}
+
+        {aba === "promocoes" && (
+          <div className="pb-8">
+            <PromocoesManager />
           </div>
         )}
       </div>
