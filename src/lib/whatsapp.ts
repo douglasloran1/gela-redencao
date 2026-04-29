@@ -57,41 +57,6 @@ async function enviarMidia(
   }
 }
 
-async function enviarBotoes(
-  telefone: string,
-  titulo: string,
-  corpo: string,
-  rodape: string,
-  botoes: { id: string; texto: string }[]
-): Promise<{ ok: boolean; erro?: string }> {
-  try {
-    const res = await fetch(`${EVOLUTION_URL}/message/sendButtons/${EVOLUTION_INSTANCE}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", apikey: EVOLUTION_KEY },
-      body: JSON.stringify({
-        number: formatarTelefone(telefone),
-        title: titulo,
-        description: corpo,
-        footer: rodape,
-        buttons: botoes.map((b) => ({
-          type: "reply",
-          displayText: b.texto,
-          id: b.id,
-        })),
-        options: { delay: 1500, presence: "composing" },
-      }),
-    });
-    if (!res.ok) {
-      return enviarTexto(telefone,
-        `${titulo}\n\n${corpo}\n\n${botoes.map((b) => `• Responda *${b.texto}*`).join("\n")}\n\n${rodape}`
-      );
-    }
-    return { ok: true };
-  } catch (err) {
-    return { ok: false, erro: String(err) };
-  }
-}
-
 // Confirmação de pedido + convite para opt-in de promoções
 export async function enviarConfirmacaoPedido(params: {
   telefoneCliente: string;
@@ -154,17 +119,18 @@ export async function enviarConfirmacaoPedido(params: {
   // Envia confirmação do pedido
   await enviarTexto(params.telefoneCliente, mensagemPedido);
 
-  // Aguarda 2s e envia convite de promoções com botões
+  // Aguarda 2s e envia convite de promoções por texto
   await new Promise((r) => setTimeout(r, 2000));
-  return enviarBotoes(
+  return enviarTexto(
     params.telefoneCliente,
-    "🔔 Promoções Gela Redenção",
-    "Quer receber ofertas exclusivas, novidades e promoções do Gela direto no seu WhatsApp?",
-    "Gela Redenção 🧊",
     [
-      { id: "SIM", texto: "✅ Sim, quero receber!" },
-      { id: "NAO", texto: "❌ Não, obrigado" },
-    ]
+      `🔔 *Quer receber promoções do Gela pelo WhatsApp?*`,
+      ``,
+      `Receba ofertas exclusivas e novidades direto aqui!`,
+      ``,
+      `Digite *1* para ✅ Sim, quero receber!`,
+      `Digite *2* para ❌ Não, obrigado`,
+    ].join("\n")
   );
 }
 
