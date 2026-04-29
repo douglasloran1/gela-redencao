@@ -90,9 +90,11 @@ Deno.serve(async (req: Request) => {
     ""
   );
 
-  // Captura o ID do botão clicado (buttonsResponseMessage)
+  // Captura resposta de botão ou lista de opções
   const buttonId = (
     (msg?.buttonsResponseMessage as Record<string, unknown>)?.selectedButtonId as string ??
+    (msg?.listResponseMessage as Record<string, unknown>)?.singleSelectReply as string ??
+    ((msg?.listResponseMessage as Record<string, unknown>)?.singleSelectReply as Record<string, unknown>)?.selectedRowId as string ??
     ""
   ).toUpperCase();
 
