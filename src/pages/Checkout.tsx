@@ -227,13 +227,13 @@ const Checkout = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <div className="container py-6">
+      <div className="container py-6 px-4 sm:px-6">
         <Link to="/" className="inline-flex items-center gap-2 text-primary font-semibold hover:underline mb-4">
           <ArrowLeft className="h-4 w-4" /> Continuar comprando
         </Link>
         <h2 className="font-display text-3xl md:text-4xl font-black text-primary mb-6">Finalizar Pedido</h2>
 
-        <form onSubmit={handleSubmit} className="grid lg:grid-cols-[1fr_400px] gap-6">
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-6">
           <div className="space-y-6">
 
             {/* Dados pessoais */}

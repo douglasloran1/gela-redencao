@@ -48,10 +48,10 @@ export const ProductCard = ({ produto, index }: { produto: Produto; index: numbe
         <h3 className="font-display font-bold text-foreground leading-tight mb-1">{produto.nome}</h3>
         <p className="text-xs text-muted-foreground mb-3 flex-1">{produto.descricao}</p>
 
-        <div className="flex items-end justify-between gap-2 mt-auto">
-          <div>
+        <div className="flex items-end justify-between gap-2 mt-auto min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="text-[10px] text-muted-foreground leading-none">a partir de</p>
-            <p className="font-display text-2xl font-black text-primary leading-tight">
+            <p className="font-display text-xl sm:text-2xl font-black text-primary leading-tight">
               R$ {produto.preco.toFixed(2).replace(".", ",")}
             </p>
           </div>
@@ -60,25 +60,25 @@ export const ProductCard = ({ produto, index }: { produto: Produto; index: numbe
             <Button
               onClick={() => adicionar(produto)}
               size="sm"
-              className="bg-gradient-gold text-secondary-foreground hover:opacity-90 font-bold shadow-gold border-0"
+              className="bg-gradient-gold text-secondary-foreground hover:opacity-90 font-bold shadow-gold border-0 shrink-0 text-xs px-2 sm:px-3"
             >
-              <Plus className="h-4 w-4" />
-              Adicionar
+              <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline sm:inline">Adicionar</span>
             </Button>
           ) : (
-            <div className="flex items-center gap-2 bg-primary text-primary-foreground rounded-full p-1 shadow-soft">
+            <div className="flex items-center gap-1 sm:gap-2 bg-primary text-primary-foreground rounded-full p-1 shadow-soft shrink-0">
               <button
                 onClick={() => alterarQtd(produto.id, item.quantidade - 1)}
-                className="h-7 w-7 rounded-full bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-smooth flex items-center justify-center"
+                className="h-6 w-6 sm:h-7 sm:w-7 rounded-full bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-smooth flex items-center justify-center"
               >
-                <Minus className="h-3.5 w-3.5" />
+                <Minus className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
               </button>
-              <span className="font-bold w-5 text-center text-sm">{item.quantidade}</span>
+              <span className="font-bold w-4 sm:w-5 text-center text-xs sm:text-sm">{item.quantidade}</span>
               <button
                 onClick={() => alterarQtd(produto.id, item.quantidade + 1)}
-                className="h-7 w-7 rounded-full bg-secondary text-secondary-foreground hover:bg-secondary-glow transition-smooth flex items-center justify-center"
+                className="h-6 w-6 sm:h-7 sm:w-7 rounded-full bg-secondary text-secondary-foreground hover:bg-secondary-glow transition-smooth flex items-center justify-center"
               >
-                <Plus className="h-3.5 w-3.5" />
+                <Plus className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
               </button>
             </div>
           )}
