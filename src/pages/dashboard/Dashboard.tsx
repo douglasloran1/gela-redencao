@@ -62,8 +62,8 @@ export default function Dashboard() {
     return () => clearInterval(id);
   }, [recarregar]);
 
-  const filtrados = filtrarPorPeriodo(todos, periodo);
-  const exibidos  = filtroStatus === "todos" ? filtrados : filtrados.filter((p) => p.status === filtroStatus);
+  const filtrados = filtrarPorPeriodo(todos, periodo).filter((p) => p.status !== "cancelado");
+  const exibidos  = filtroStatus === "todos" ? filtrarPorPeriodo(todos, periodo) : filtrarPorPeriodo(todos, periodo).filter((p) => p.status === filtroStatus);
 
   const totalReceita    = filtrados.reduce((s, p) => s + p.total, 0);
   const totalPedidos    = filtrados.length;
