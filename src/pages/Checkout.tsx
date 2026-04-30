@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-const formasPagamento = [
+const TODAS_FORMAS_PAGAMENTO = [
   { id: "pix",      nome: "PIX",     icon: Smartphone, desc: "Aprovação imediata" },
   { id: "dinheiro", nome: "Dinheiro", icon: Banknote,   desc: "Pagar na entrega" },
   { id: "cartao",   nome: "Cartão",  icon: CreditCard, desc: "Débito ou crédito" },
@@ -65,6 +65,25 @@ const Checkout = () => {
   const [distanciaKm, setDistanciaKm] = useState<number | null>(null);
   const [calculandoFrete, setCalculandoFrete] = useState(false);
   const [freteCalculado, setFreteCalculado] = useState(false);
+
+  // Verifica se há item de revenda no carrinho — bloqueia cartão
+  const temRevenda = itens.some((i) =>
+    i.badge?.toUpperCase().includes("REVENDA") ||
+    i.categoria?.toUpperCase().includes("REVENDA") ||
+    i.nome?.toUpperCase().includes("REVENDA")
+  );
+
+  // Reseta cartão para PIX se usuário adicionou item de revenda depois
+  useEffect(() => {
+    if (temRevenda && pagamento === "cartao") {
+      setPagamento("pix");
+    }
+  }, [temRevenda, pagamento]);
+
+  // Se tem revenda, bloqueia cartão e reseta para pix se necessário
+  const formasPagamento = temRevenda
+    ? TODAS_FORMAS_PAGAMENTO.filter((f) => f.id !== "cartao")
+    : TODAS_FORMAS_PAGAMENTO;
 
   const subtotal   = total();
   const totalFinal = subtotal + taxaEntrega;
@@ -324,6 +343,14 @@ const Checkout = () => {
               <h3 className="font-display font-bold text-lg text-primary flex items-center gap-2 mb-4">
                 <CreditCard className="h-5 w-5" /> Forma de pagamento
               </h3>
+              {temRevenda && (
+                <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-3">
+                  <span className="text-amber-500 text-lg shrink-0">⚠️</span>
+                  <p className="text-sm text-amber-800">
+                    <strong>Atenção:</strong> Seu carrinho contém itens de revenda. O pagamento por cartão não está disponível para esses produtos — apenas <strong>PIX</strong> ou <strong>Dinheiro</strong>.
+                  </p>
+                </div>
+              )}
               <div className="grid sm:grid-cols-3 gap-3">
                 {formasPagamento.map((f) => (
                   <button
