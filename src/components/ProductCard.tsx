@@ -39,7 +39,7 @@ export const ProductCard = ({ produto, index }: { produto: Produto; index: numbe
           alt={produto.nome}
           loading="lazy"
           onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK; }}
-          className="w-full h-full object-contain p-4 group-hover:scale-110 transition-bounce"
+          className="w-full h-full object-cover group-hover:scale-110 transition-bounce"
         />
       </div>
 

@@ -57,6 +57,7 @@ const Checkout = () => {
   const [referencia, setReferencia] = useState("");
   const [pagamento, setPagamento] = useState("pix");
   const [troco, setTroco]         = useState("");
+  const [tipoEntrega, setTipoEntrega] = useState<"entrega" | "retirada">("entrega");
   const [aceitaPromocoes, setAceitaPromocoes] = useState(false);
   const [buscandoCep, setBuscandoCep] = useState(false);
 
@@ -86,7 +87,8 @@ const Checkout = () => {
     : TODAS_FORMAS_PAGAMENTO;
 
   const subtotal   = total();
-  const totalFinal = subtotal + taxaEntrega;
+  const taxaFinal  = tipoEntrega === "retirada" ? 0 : taxaEntrega;
+  const totalFinal = subtotal + taxaFinal;
 
   // ── Geocoding via Nominatim (OpenStreetMap, sem chave) ───────────────────
   const calcularFreteByAddress = async (rua: string, num: string, bairroVal: string, cidadeVal: string) => {
@@ -193,8 +195,12 @@ const Checkout = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (itens.length === 0) { toast.error("Seu carrinho está vazio"); return; }
-    if (!nome || !telefone || !endereco || !numero || !bairro) {
+    if (!nome || !telefone) {
       toast.error("Preencha todos os campos obrigatórios");
+      return;
+    }
+    if (tipoEntrega === "entrega" && (!endereco || !numero || !bairro)) {
+      toast.error("Preencha o endereço de entrega");
       return;
     }
     // Salva opt-in de promoções se cliente aceitou
@@ -206,7 +212,7 @@ const Checkout = () => {
         { onConflict: "telefone" }
       );
     }
-    setDadosCheckout({ nome, telefone, cep, endereco, numero, bairro, cidade, referencia, formaPagamento: pagamento, troco });
+    setDadosCheckout({ nome, telefone, cep, endereco: tipoEntrega === "retirada" ? "Retirada na loja" : endereco, numero: tipoEntrega === "retirada" ? "S/N" : numero, bairro: tipoEntrega === "retirada" ? "Redenção" : bairro, cidade, referencia: tipoEntrega === "retirada" ? "Rua Senador Ruy Carneiro, 120 – Redenção, Mossoró–RN" : referencia, formaPagamento: pagamento, troco });
     navigate("/finalizado");
   };
 
@@ -255,7 +261,45 @@ const Checkout = () => {
               </div>
             </motion.div>
 
+            {/* Tipo de entrega */}
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 }} className="bg-card rounded-2xl p-6 shadow-card border border-border">
+              <h3 className="font-display font-bold text-lg text-primary flex items-center gap-2 mb-4">
+                <Truck className="h-5 w-5" /> Como quer receber?
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setTipoEntrega("entrega")}
+                  className={`p-4 rounded-xl border-2 transition-all text-left ${tipoEntrega === "entrega" ? "border-primary bg-primary/5 shadow-glow" : "border-border hover:border-primary/50"}`}
+                >
+                  <span className="text-2xl block mb-1">🛵</span>
+                  <p className="font-bold text-foreground text-sm">Entrega</p>
+                  <p className="text-xs text-muted-foreground">Receba em casa</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTipoEntrega("retirada")}
+                  className={`p-4 rounded-xl border-2 transition-all text-left ${tipoEntrega === "retirada" ? "border-primary bg-primary/5 shadow-glow" : "border-border hover:border-primary/50"}`}
+                >
+                  <span className="text-2xl block mb-1">🏪</span>
+                  <p className="font-bold text-foreground text-sm">Retirada</p>
+                  <p className="text-xs text-muted-foreground">Buscar na loja</p>
+                </button>
+              </div>
+              {tipoEntrega === "retirada" && (
+                <div className="mt-4 flex items-start gap-2 bg-primary/5 border border-primary/20 rounded-xl px-4 py-3">
+                  <MapPin className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Endereço da loja</p>
+                    <p className="text-sm text-muted-foreground">Rua Senador Ruy Carneiro, 120 – Redenção, Mossoró–RN</p>
+                    <p className="text-xs text-muted-foreground mt-1">Horário: Todos os dias • 08h às 23h</p>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+
             {/* Endereço com CEP automático */}
+            {tipoEntrega === "entrega" && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-card rounded-2xl p-6 shadow-card border border-border">
               <h3 className="font-display font-bold text-lg text-primary flex items-center gap-2 mb-4">
                 <MapPin className="h-5 w-5" /> Endereço de entrega
@@ -326,7 +370,7 @@ const Checkout = () => {
                   <Truck className="h-4 w-4 text-primary shrink-0" />
                   <span>
                     Distância estimada: <strong>{distanciaKm} km</strong> — Taxa de entrega:{" "}
-                    <strong className="text-primary">R$ {taxaEntrega.toFixed(2).replace(".", ",")}</strong>
+                    <strong className="text-primary">R$ {taxaFinal.toFixed(2).replace(".", ",")}</strong>
                   </span>
                 </div>
               )}
@@ -337,6 +381,8 @@ const Checkout = () => {
                 </div>
               )}
             </motion.div>
+
+            )}
 
             {/* Pagamento */}
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-card rounded-2xl p-6 shadow-card border border-border">
@@ -412,7 +458,7 @@ const Checkout = () => {
                     {calculandoFrete
                       ? "Calculando..."
                       : subtotal > 0
-                        ? `R$ ${taxaEntrega.toFixed(2).replace(".", ",")}`
+                        ? `R$ ${taxaFinal.toFixed(2).replace(".", ",")}`
                         : "R$ 0,00"
                     }
                   </span>
