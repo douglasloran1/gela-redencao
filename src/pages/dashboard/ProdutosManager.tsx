@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import {
   Plus, Pencil, Trash2, X, Check, ImagePlus,
-  Package, Loader2, RefreshCw, Upload, Link as LinkIcon,
+  Package, Loader2, RefreshCw, Upload, Link as LinkIcon, Copy,
 } from "lucide-react";
 import { useProdutos, Produto } from "@/store/produtos";
 import { supabase } from "@/lib/supabase";
@@ -351,6 +351,56 @@ export function ProdutosManager() {
   const [salvando, setSalvando] = useState(false);
   const [excluindo, setExcluindo] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
+  const [removendoDups, setRemovendoDups] = useState(false);
+
+  const handleRemoverDuplicados = async () => {
+    setRemovendoDups(true);
+    try {
+      // Agrupa por nome normalizado
+      const grupos: Record<string, typeof produtos> = {};
+      for (const p of produtos) {
+        const key = p.nome.trim().toUpperCase();
+        if (!grupos[key]) grupos[key] = [];
+        grupos[key].push(p);
+      }
+
+      const idsParaDeletar: string[] = [];
+      for (const grupo of Object.values(grupos)) {
+        if (grupo.length < 2) continue;
+        // Ordena: primeiro os que têm imagem, depois por ID crescente
+        const ordenados = [...grupo].sort((a, b) => {
+          const aTemImg = a.imagem ? 0 : 1;
+          const bTemImg = b.imagem ? 0 : 1;
+          if (aTemImg !== bTemImg) return aTemImg - bTemImg;
+          return Number(a.id) - Number(b.id);
+        });
+        // Mantém o primeiro, deleta o resto
+        for (const dup of ordenados.slice(1)) {
+          idsParaDeletar.push(dup.id);
+        }
+      }
+
+      if (idsParaDeletar.length === 0) {
+        toast.info("Nenhum duplicado encontrado!");
+        return;
+      }
+
+      // Deleta em lotes de 50
+      let deletados = 0;
+      for (let i = 0; i < idsParaDeletar.length; i += 50) {
+        const lote = idsParaDeletar.slice(i, i + 50);
+        const { error } = await supabase.from("produtos").delete().in("id", lote);
+        if (!error) deletados += lote.length;
+      }
+
+      await carregar();
+      toast.success(`✅ ${deletados} produtos duplicados removidos!`);
+    } catch (e) {
+      toast.error("Erro ao remover duplicados: " + String(e));
+    } finally {
+      setRemovendoDups(false);
+    }
+  };
 
   useEffect(() => { carregar(); }, []);
 
@@ -443,6 +493,22 @@ export function ProdutosManager() {
           />
           <Button size="sm" variant="ghost" onClick={() => carregar()} className="text-white/70 hover:text-white h-9">
             <RefreshCw className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={handleRemoverDuplicados}
+            disabled={removendoDups || carregando}
+            className="text-amber-400 hover:text-amber-300 hover:bg-white/10 h-9 gap-1.5"
+            title="Remover produtos duplicados"
+          >
+            {removendoDups
+              ? <Loader2 className="h-4 w-4 animate-spin" />
+              : <Copy className="h-4 w-4" />
+            }
+            <span className="hidden sm:inline text-xs font-semibold">
+              {removendoDups ? "Removendo..." : "Remover Duplicados"}
+            </span>
           </Button>
           {!adicionando && (
             <Button
