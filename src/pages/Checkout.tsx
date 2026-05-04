@@ -24,10 +24,10 @@ const LOJA_LNG = -37.3442;
 
 // Tabela de frete por distância (km → R$)
 
-// Frete: R$5 até 1km, depois +R$1 por km adicional (arredondado para cima)
+// Frete: R$3 até 1km, depois +R$1 por km adicional (arredondado para cima)
 function calcularFrete(km: number): number {
-  if (km <= 1) return 5;
-  return 5 + Math.ceil(km - 1);
+  if (km <= 1) return 3;
+  return 3 + Math.ceil(km - 1);
 }
 
 // Haversine – distância em km entre dois pontos
