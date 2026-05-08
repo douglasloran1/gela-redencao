@@ -28,7 +28,7 @@ export const ProductCard = ({ produto, index }: { produto: Produto; index: numbe
       transition={{ duration: 0.4, delay: index * 0.04 }}
       className="group bg-card rounded-2xl overflow-hidden shadow-card hover:shadow-glow transition-smooth border border-border/50 flex flex-col"
     >
-      <div className="relative bg-gradient-frost aspect-square overflow-hidden">
+      <div className="relative bg-white aspect-square overflow-hidden">
         {produto.badge && (
           <span className="absolute top-3 left-3 z-10 bg-secondary text-secondary-foreground text-[10px] font-black px-2.5 py-1 rounded-full shadow-gold">
             {produto.badge}
@@ -39,7 +39,7 @@ export const ProductCard = ({ produto, index }: { produto: Produto; index: numbe
           alt={produto.nome}
           loading="lazy"
           onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK; }}
-          className="w-full h-full object-cover group-hover:scale-110 transition-bounce"
+          className="w-full h-full object-contain p-2 group-hover:scale-105 transition-bounce"
         />
       </div>
 
