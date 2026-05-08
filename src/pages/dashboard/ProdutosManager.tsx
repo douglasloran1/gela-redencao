@@ -396,6 +396,7 @@ export function ProdutosManager() {
   const [salvando, setSalvando] = useState(false);
   const [excluindo, setExcluindo] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
+  const [categoriaFiltro, setCategoriaFiltro] = useState("Todos");
   const [removendoDups, setRemovendoDups] = useState(false);
 
   const handleRemoverDuplicados = async () => {
@@ -449,11 +450,13 @@ export function ProdutosManager() {
 
   useEffect(() => { carregar(); }, []);
 
-  const produtosFiltrados = produtos.filter(
-    (p) =>
-      p.nome.toLowerCase().includes(busca.toLowerCase()) ||
-      p.categoria.toLowerCase().includes(busca.toLowerCase())
-  );
+  const categoriasUnicas = ["Todos", ...Array.from(new Set(produtos.map((p) => p.categoria).filter(Boolean)))].sort((a, b) => a === "Todos" ? -1 : b === "Todos" ? 1 : a.localeCompare(b));
+
+  const produtosFiltrados = produtos.filter((p) => {
+    const matchBusca = p.nome.toLowerCase().includes(busca.toLowerCase()) || p.categoria.toLowerCase().includes(busca.toLowerCase());
+    const matchCategoria = categoriaFiltro === "Todos" || p.categoria === categoriaFiltro;
+    return matchBusca && matchCategoria;
+  });
 
   const handleSalvarNovo = async (form: FormData) => {
     setSalvando(true);
@@ -566,6 +569,43 @@ export function ProdutosManager() {
           )}
         </div>
       </div>
+
+      {/* Filtro por categoria */}
+      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        {categoriasUnicas.map((cat) => (
+          <button
+            key={cat}
+            onClick={() => setCategoriaFiltro(cat)}
+            className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all border-2 ${
+              categoriaFiltro === cat
+                ? "bg-[#f5a500] border-[#f5a500] text-[#0f1b3d]"
+                : "bg-white/5 border-white/20 text-white/60 hover:border-[#f5a500]/50 hover:text-white"
+            }`}
+          >
+            {cat}
+            {cat !== "Todos" && (
+              <span className="ml-1.5 opacity-60">
+                ({produtos.filter((p) => p.categoria === cat).length})
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Contador de resultados */}
+      {(busca || categoriaFiltro !== "Todos") && (
+        <div className="flex items-center justify-between">
+          <p className="text-white/50 text-xs">
+            {produtosFiltrados.length} produto{produtosFiltrados.length !== 1 ? "s" : ""} encontrado{produtosFiltrados.length !== 1 ? "s" : ""}
+          </p>
+          <button
+            onClick={() => { setBusca(""); setCategoriaFiltro("Todos"); }}
+            className="text-xs text-[#f5a500] hover:underline"
+          >
+            Limpar filtros
+          </button>
+        </div>
+      )}
 
       {/* Aviso sobre bucket */}
       <div className="bg-blue-900/40 border border-blue-400/20 rounded-xl p-3 text-blue-200 text-xs leading-relaxed">
