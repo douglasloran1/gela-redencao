@@ -579,7 +579,7 @@ export function ProdutosManager() {
             className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all border-2 ${
               categoriaFiltro === cat
                 ? "bg-[#f5a500] border-[#f5a500] text-[#0f1b3d]"
-                : "bg-white/5 border-white/20 text-white/60 hover:border-[#f5a500]/50 hover:text-white"
+                : "bg-[#1a1a2e] border-white/20 text-white/80 hover:border-[#f5a500]/50 hover:text-white"
             }`}
           >
             {cat}
