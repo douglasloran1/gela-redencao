@@ -521,7 +521,7 @@ export function ProdutosManager() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
+      <div className="bg-[#0f1b3d] rounded-2xl p-4 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2 flex-wrap">
           <Package className="h-5 w-5 text-[#f5a500]" />
           <h2 className="font-bold text-lg text-white">Gerenciar Produtos</h2>
@@ -536,8 +536,8 @@ export function ProdutosManager() {
           <Input
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar produto..."
-            className="bg-white/10 border-white/20 text-white placeholder:text-white/40 h-9 w-44 text-sm"
+            placeholder="🔍 Buscar produto..."
+            className="bg-white/10 border-white/20 text-white placeholder:text-white/50 h-9 w-52 text-sm"
           />
           <Button size="sm" variant="ghost" onClick={() => carregar()} className="text-white/70 hover:text-white h-9">
             <RefreshCw className="h-4 w-4" />
@@ -571,7 +571,7 @@ export function ProdutosManager() {
       </div>
 
       {/* Filtro por categoria */}
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+      <div className="bg-[#0f1b3d] rounded-2xl px-4 py-3 flex gap-2 overflow-x-auto scrollbar-hide">
         {categoriasUnicas.map((cat) => (
           <button
             key={cat}
