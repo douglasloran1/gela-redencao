@@ -50,6 +50,48 @@ function ImageUploader({
   // Drag-and-drop
   const [dragging, setDragging] = useState(false);
 
+  // Normaliza a imagem: fundo branco, padding uniforme, 800x800
+  const normalizarImagem = (file: File): Promise<File> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const SIZE = 800;
+        const PADDING = 40;
+        const canvas = document.createElement("canvas");
+        canvas.width = SIZE;
+        canvas.height = SIZE;
+        const ctx = canvas.getContext("2d")!;
+
+        // Fundo branco
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, SIZE, SIZE);
+
+        // Calcular escala mantendo proporção com padding
+        const maxDim = SIZE - PADDING * 2;
+        const scale = Math.min(maxDim / img.width, maxDim / img.height);
+        const w = img.width * scale;
+        const h = img.height * scale;
+        const x = (SIZE - w) / 2;
+        const y = (SIZE - h) / 2;
+
+        ctx.drawImage(img, x, y, w, h);
+        URL.revokeObjectURL(url);
+
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const normalizedFile = new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" });
+            resolve(normalizedFile);
+          } else {
+            resolve(file);
+          }
+        }, "image/jpeg", 0.92);
+      };
+      img.onerror = () => resolve(file);
+      img.src = url;
+    });
+  };
+
   const processFile = useCallback(async (file: File) => {
     if (!file.type.startsWith("image/")) {
       toast.error("Selecione um arquivo de imagem válido.");
@@ -65,10 +107,13 @@ function ImageUploader({
       const localUrl = URL.createObjectURL(file);
       setPreview(localUrl);
 
-      const publicUrl = await uploadImagem(file);
+      // Normaliza antes de subir
+      const fileNormalizado = await normalizarImagem(file);
+
+      const publicUrl = await uploadImagem(fileNormalizado);
       setPreview(publicUrl);
       onChange(publicUrl);
-      toast.success("✅ Imagem enviada ao Supabase Storage!");
+      toast.success("✅ Imagem enviada e otimizada!");
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Erro no upload");
       setPreview("");
