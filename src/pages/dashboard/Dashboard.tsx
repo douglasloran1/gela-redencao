@@ -14,6 +14,7 @@ import { useAuth } from "@/store/auth";
 import { ProdutosManager } from "./ProdutosManager";
 import { BannersManager } from "./BannersManager";
 import { PromocoesManager } from "./PromocoesManager";
+import { CarrosselManager } from "./CarrosselManager";
 import {
   Pedido, carregarPedidos, atualizarStatus,
   PAGAMENTO_LABEL, STATUS_LABEL,
@@ -44,7 +45,7 @@ export default function Dashboard() {
   const [periodo, setPeriodo]         = useState<Periodo>("semana");
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
   const [pedidoAtivo, setPedidoAtivo] = useState<Pedido | null>(null);
-  const [aba, setAba] = useState<"pedidos" | "relatorios" | "produtos" | "banners" | "promocoes">("pedidos");
+  const [aba, setAba] = useState<"pedidos" | "relatorios" | "produtos" | "banners" | "promocoes" | "carrossel">("pedidos");
 
   const handleLogout = () => {
     logout();
@@ -126,6 +127,7 @@ export default function Dashboard() {
     { id: "produtos",   label: "🛒 Produtos" },
     { id: "banners",    label: "🖼️ Banners" },
     { id: "promocoes",  label: "📣 Promoções" },
+    { id: "carrossel",  label: "🎠 Carrossel" },
   ] as const;
 
   return (
@@ -499,6 +501,12 @@ export default function Dashboard() {
         {aba === "promocoes" && (
           <div className="pb-8">
             <PromocoesManager />
+          </div>
+        )}
+
+        {aba === "carrossel" && (
+          <div className="pb-8">
+            <CarrosselManager />
           </div>
         )}
       </div>

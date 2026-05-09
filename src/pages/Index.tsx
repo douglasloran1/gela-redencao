@@ -7,6 +7,7 @@ import { useProdutos } from "@/store/produtos";
 import { cn } from "@/lib/utils";
 import { Loader2, Search, X } from "lucide-react";
 import { InstalarApp } from "@/components/InstalarApp";
+import { CarrosselPromos } from "@/components/CarrosselPromos";
 
 const Index = () => {
   const { produtos, categorias, carregando, erro, carregar } = useProdutos();
@@ -42,6 +43,9 @@ const Index = () => {
               <InstalarApp />
             </div>
           </div>
+
+          {/* Carrossel de promoções */}
+          <CarrosselPromos />
 
           {/* Barra de busca */}
           {!carregando && !erro && (
