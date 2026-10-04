@@ -6,12 +6,16 @@ import { Button } from "@/components/ui/button";
 
 const FALLBACK = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect width='200' height='200' fill='%23e2e8f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='48'%3E🧊%3C/text%3E%3C/svg%3E";
 
-// Converte URL do Supabase Storage para usar o endpoint de render (sem CORS)
+// Usa a URL pública direta do Supabase Storage (/object/public/).
+// O endpoint /render/image/ (Image Transformations) retornava 403 neste projeto,
+// provavelmente por o recurso não estar habilitado no plano.
 function fixImageUrl(url: string): string {
   if (!url) return "";
-  // Substitui /object/public/ por /render/image/public/ para evitar CORS
-  if (url.includes("supabase.co/storage/v1/object/public/")) {
-    return url.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/") + "?width=400&quality=80";
+  // Se alguma URL já salva no banco estiver no formato /render/image/, volta para o direto
+  if (url.includes("supabase.co/storage/v1/render/image/public/")) {
+    return url
+      .replace("/storage/v1/render/image/public/", "/storage/v1/object/public/")
+      .split("?")[0];
   }
   return url;
 }
